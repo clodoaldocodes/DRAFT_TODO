@@ -23,9 +23,15 @@ class _DrawRectangleState extends State<DrawRectangle> {
   Offset? _minPoint;
   Offset? _maxPoint;
 
+  Rect? _drawingArea;
+
   void _handleTapDown(TapDownDetails details) {
     final RenderBox box = context.findRenderObject() as RenderBox;
     final Offset localOffset = box.globalToLocal(details.globalPosition);
+
+    if (_drawingArea != null && !_drawingArea!.contains(localOffset)) {
+      return;
+    }
 
     setState(() {
       if (_minPoint == null) {
@@ -37,6 +43,23 @@ class _DrawRectangleState extends State<DrawRectangle> {
         _maxPoint = null;
       }
     });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance!.addPostFrameCallback((_) {
+      _setDrawingArea();
+    });
+  }
+
+  void _setDrawingArea() {
+    final RenderBox box = context.findRenderObject() as RenderBox;
+    final Size size = box.size;
+
+    final double margin = 50;
+    _drawingArea = Rect.fromLTRB(
+        margin, margin, size.width - margin, size.height - margin);
   }
 
   @override
@@ -79,6 +102,13 @@ class RectanglePainter extends CustomPainter {
         _minPoint!, Offset(_minPoint!.dx + size, _minPoint!.dy + size));
 
     canvas.drawRect(rect, paint);
+
+    Paint greenPaint = Paint()
+      ..color = Colors.green
+      ..style = PaintingStyle.fill;
+
+    canvas.drawCircle(_minPoint!, 5, greenPaint);
+    canvas.drawCircle(_maxPoint!, 5, greenPaint);
   }
 
   @override
