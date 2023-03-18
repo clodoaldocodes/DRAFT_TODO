@@ -1,74 +1,59 @@
 import 'package:flutter/material.dart';
 
-void main() {
-  runApp(MyApp());
-}
+void main() => runApp(MyApp());
 
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Desenho de Retângulo',
-      home: DrawRectangle(),
+      title: 'Desenhar Retângulo',
+      home: DrawingPage(),
     );
   }
 }
 
-class DrawRectangle extends StatefulWidget {
+class DrawingPage extends StatefulWidget {
   @override
-  _DrawRectangleState createState() => _DrawRectangleState();
+  _DrawingPageState createState() => _DrawingPageState();
 }
 
-class _DrawRectangleState extends State<DrawRectangle> {
-  Offset? _minPoint;
-  Offset? _maxPoint;
+class _DrawingPageState extends State<DrawingPage> {
+  List<Rect> rectangles = [];
+  Rect? currentRectangle;
 
-  Rect? _drawingArea;
-
-  void _handleTapDown(TapDownDetails details) {
-    final RenderBox box = context.findRenderObject() as RenderBox;
-    final Offset localOffset = box.globalToLocal(details.globalPosition);
-
-    if (_drawingArea != null && !_drawingArea!.contains(localOffset)) {
-      return;
-    }
-
+  void _onTapDown(TapDownDetails details) {
     setState(() {
-      if (_minPoint == null) {
-        _minPoint = localOffset;
-      } else if (_maxPoint == null) {
-        _maxPoint = localOffset;
-      } else {
-        _minPoint = localOffset;
-        _maxPoint = null;
-      }
+      final startPoint = details.localPosition;
+      currentRectangle = Rect.fromPoints(startPoint, startPoint);
     });
   }
 
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance!.addPostFrameCallback((_) {
-      _setDrawingArea();
+  void _onPanUpdate(DragUpdateDetails details) {
+    setState(() {
+      final endPoint = details.localPosition;
+      currentRectangle = Rect.fromPoints(currentRectangle!.topLeft, endPoint);
     });
   }
 
-  void _setDrawingArea() {
-    final RenderBox box = context.findRenderObject() as RenderBox;
-    final Size size = box.size;
-
-    final double margin = 50;
-    _drawingArea = Rect.fromLTRB(
-        margin, margin, size.width - margin, size.height - margin);
+  void _onPanEnd(DragEndDetails details) {
+    setState(() {
+      rectangles.add(currentRectangle!);
+      currentRectangle = null;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: Text('Desenhar Retângulo'),
+      ),
       body: GestureDetector(
-        onTapDown: _handleTapDown,
+        onTapDown: _onTapDown,
+        onPanUpdate: _onPanUpdate,
+        onPanEnd: _onPanEnd,
         child: CustomPaint(
-          painter: RectanglePainter(_minPoint, _maxPoint),
+          painter: MyPainter(rectangles, currentRectangle),
           child: Container(),
         ),
       ),
@@ -76,44 +61,41 @@ class _DrawRectangleState extends State<DrawRectangle> {
   }
 }
 
-class RectanglePainter extends CustomPainter {
-  final Offset? _minPoint;
-  final Offset? _maxPoint;
+class MyPainter extends CustomPainter {
+  final List<Rect> rectangles;
+  final Rect? currentRectangle;
 
-  RectanglePainter(this._minPoint, this._maxPoint);
+  MyPainter(this.rectangles, this.currentRectangle);
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (_minPoint == null || _maxPoint == null) {
-      return;
-    }
-
-    Paint paint = Paint()
-      ..color = Colors.blue
+    final paint = Paint()
+      ..color = Colors.black
       ..strokeWidth = 2.0
       ..style = PaintingStyle.stroke;
 
-    double width = (_maxPoint!.dx - _minPoint!.dx).abs();
-    double height = (_maxPoint!.dy - _minPoint!.dy).abs();
-
-    double size = width < height ? width : height;
-
-    Rect rect = Rect.fromPoints(
-        _minPoint!, Offset(_minPoint!.dx + size, _minPoint!.dy + size));
-
-    canvas.drawRect(rect, paint);
-
-    Paint greenPaint = Paint()
-      ..color = Colors.green
+    final erasePaint = Paint()
+      ..blendMode = BlendMode.clear
       ..style = PaintingStyle.fill;
 
-    canvas.drawCircle(_minPoint!, 5, greenPaint);
-    canvas.drawCircle(_maxPoint!, 5, greenPaint);
+    for (final rect in rectangles) {
+      canvas.drawRect(rect, paint);
+    }
+
+    if (currentRectangle != null) {
+      canvas.drawRect(
+          Rect.fromPoints(
+              currentRectangle!.topLeft, currentRectangle!.bottomRight),
+          erasePaint);
+      canvas.drawRect(
+          Rect.fromPoints(
+              currentRectangle!.topLeft, currentRectangle!.bottomRight),
+          paint);
+    }
   }
 
   @override
-  bool shouldRepaint(RectanglePainter oldDelegate) {
-    return oldDelegate._minPoint != _minPoint ||
-        oldDelegate._maxPoint != _maxPoint;
+  bool shouldRepaint(CustomPainter oldDelegate) {
+    return true;
   }
 }
