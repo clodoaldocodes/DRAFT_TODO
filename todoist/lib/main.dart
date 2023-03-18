@@ -44,39 +44,9 @@ class _DrawRectangleState extends State<DrawRectangle> {
     return Scaffold(
       body: GestureDetector(
         onTapDown: _handleTapDown,
-        child: Stack(
-          children: [
-            CustomPaint(
-              painter: RectanglePainter(_minPoint, _maxPoint),
-              child: Container(),
-            ),
-            if (_minPoint != null)
-              Positioned(
-                left: _minPoint!.dx - 10,
-                top: _minPoint!.dy - 10,
-                child: Container(
-                  width: 20,
-                  height: 20,
-                  decoration: BoxDecoration(
-                    color: Colors.green,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ),
-            if (_maxPoint != null)
-              Positioned(
-                left: _maxPoint!.dx - 10,
-                top: _maxPoint!.dy - 10,
-                child: Container(
-                  width: 20,
-                  height: 20,
-                  decoration: BoxDecoration(
-                    color: Colors.green,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ),
-          ],
+        child: CustomPaint(
+          painter: RectanglePainter(_minPoint, _maxPoint),
+          child: Container(),
         ),
       ),
     );
@@ -100,7 +70,13 @@ class RectanglePainter extends CustomPainter {
       ..strokeWidth = 2.0
       ..style = PaintingStyle.stroke;
 
-    Rect rect = Rect.fromPoints(_minPoint!, _maxPoint!);
+    double width = (_maxPoint!.dx - _minPoint!.dx).abs();
+    double height = (_maxPoint!.dy - _minPoint!.dy).abs();
+
+    double size = width < height ? width : height;
+
+    Rect rect = Rect.fromPoints(
+        _minPoint!, Offset(_minPoint!.dx + size, _minPoint!.dy + size));
 
     canvas.drawRect(rect, paint);
   }
